@@ -1,6 +1,7 @@
 package main
 
 import (
+	"syscall"
 	"testing"
 	"unsafe"
 )
@@ -37,4 +38,13 @@ func TestLyricsAndScreenSafety(t *testing.T) {
 	if fonts := enumInstalledFonts(); len(fonts) == 0 {
 		t.Fatalf("expected system fonts to be enumerated")
 	}
+	h1, ok1 := acquireSingleInstanceMutex("Local\\AILrc_UnitTest_Mutex_Check")
+	if !ok1 || h1 == 0 {
+		t.Fatalf("expected first mutex acquisition to succeed")
+	}
+	_, ok2 := acquireSingleInstanceMutex("Local\\AILrc_UnitTest_Mutex_Check")
+	if ok2 {
+		t.Fatalf("expected second mutex acquisition to fail with ERROR_ALREADY_EXISTS")
+	}
+	_ = syscall.CloseHandle(syscall.Handle(h1))
 }

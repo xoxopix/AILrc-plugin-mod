@@ -12,7 +12,7 @@ void WINAPI MenuStateUpdater::OnExecute(IUnknown* Data) {
 
 PluginController::PluginController(IAIMPCore* core, IAIMPServicePlayer* player) 
     : FCore(core), FPlayer(player), FMenuManager(nullptr), FMenuToggle(nullptr), FMenuLock(nullptr), FMenuSettings(nullptr),
-      FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0) {
+      FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0), FLastLaunchTick(0) {
     
     FCore->AddRef();
     if (FPlayer) FPlayer->AddRef();
@@ -160,25 +160,40 @@ void PluginController::HandleMenuAction(IAIMPMenuItem* menuItem) {
 }
 
 void PluginController::LaunchApp() {
+    std::lock_guard<std::mutex> lock(FLaunchMutex);
     HWND hwnd = FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE);
-    if (!hwnd) {
-        IAIMPString* pluginsPath = nullptr;
-        if (FCore->GetPath(AIMP_CORE_PATH_PLUGINS, &pluginsPath) == S_OK && pluginsPath) {
-            std::wstring basePath = Utils::GetAIMPString(pluginsPath);
-            if (!basePath.empty() && basePath.back() != L'\\') {
-                basePath += L'\\';
-            }
-            std::wstring pluginDir = basePath + L"AILrc_plugin\\";
-            std::wstring appExe = pluginDir + L"AILrc.exe";
-            pluginsPath->Release();
+    if (hwnd) {
+        return;
+    }
 
-            ShellExecuteW(nullptr, L"open", appExe.c_str(), nullptr, pluginDir.c_str(), SW_SHOWNORMAL);
-            SyncInitialData();
+    FPendingTrackJson = GetTrackInfoJSON();
+
+    ULONGLONG now = GetTickCount64();
+    if (FLastLaunchTick != 0 && (now - FLastLaunchTick) < 3000) {
+        return;
+    }
+
+    IAIMPString* pluginsPath = nullptr;
+    if (FCore->GetPath(AIMP_CORE_PATH_PLUGINS, &pluginsPath) == S_OK && pluginsPath) {
+        std::wstring basePath = Utils::GetAIMPString(pluginsPath);
+        if (!basePath.empty() && basePath.back() != L'\\') {
+            basePath += L'\\';
         }
+        std::wstring pluginDir = basePath + L"AILrc_plugin\\";
+        std::wstring appExe = pluginDir + L"AILrc.exe";
+        pluginsPath->Release();
+
+        FLastLaunchTick = now;
+        ShellExecuteW(nullptr, L"open", appExe.c_str(), nullptr, pluginDir.c_str(), SW_SHOWNORMAL);
+        SyncInitialData();
     }
 }
 
 void PluginController::CloseApp() {
+    {
+        std::lock_guard<std::mutex> lock(FLaunchMutex);
+        FLastLaunchTick = 0;
+    }
     HWND hwnd = FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE);
     if (hwnd) {
         PostMessageW(hwnd, WM_CLOSE, 0, 0);
@@ -251,10 +266,7 @@ void PluginController::ScheduleAutoClose() {
 }
 
 void PluginController::SyncInitialData() {
-    std::string trackJson = GetTrackInfoJSON();
-    std::string stateJson = GetStateJSON();
-
-    std::thread([trackJson, stateJson]() {
+    std::thread([this]() {
         HWND hwnd = nullptr;
         int attempts = 0;
         do {
@@ -264,9 +276,18 @@ void PluginController::SyncInitialData() {
         } while (!hwnd && attempts <= 50);
 
         if (hwnd) {
-            Sleep(1000);
+            Sleep(700);
+            std::string trackJson;
+            {
+                std::lock_guard<std::mutex> lock(FLaunchMutex);
+                trackJson = FPendingTrackJson;
+                FLastLaunchTick = 0;
+            }
+            nlohmann::json sj;
+            sj["type"] = "state";
+            sj["data"]["state"] = FLastState.load();
             if (!trackJson.empty()) Utils::SendJSON(trackJson);
-            if (!stateJson.empty()) Utils::SendJSON(stateJson);
+            Utils::SendJSON(sj.dump());
         }
     }).detach();
 }

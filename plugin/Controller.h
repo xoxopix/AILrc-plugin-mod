@@ -7,6 +7,7 @@
 #include "apiActions.h"
 #include "IUnknownImpl.h"
 #include <atomic>
+#include <mutex>
 #include <string>
 
 class PluginController;
@@ -38,6 +39,9 @@ private:
     std::atomic<bool> FEnabled;
     std::atomic<int> FLastState;
     std::atomic<unsigned long long> FStopSeq;
+    std::mutex FLaunchMutex;
+    ULONGLONG FLastLaunchTick;
+    std::string FPendingTrackJson;
 
     void ScheduleAutoClose();
     void SyncInitialData();

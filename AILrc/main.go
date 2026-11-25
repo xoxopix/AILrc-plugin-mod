@@ -18,6 +18,25 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+var (
+	kernel32        = syscall.NewLazyDLL("kernel32.dll")
+	procCreateMutex = kernel32.NewProc("CreateMutexW")
+)
+
+// acquireSingleInstanceMutex returns true only if this process is the first instance
+// for the given mutex name, capturing ERROR_ALREADY_EXISTS directly from Call().
+func acquireSingleInstanceMutex(mutexName string) (uintptr, bool) {
+	name, _ := syscall.UTF16PtrFromString(mutexName)
+	mutex, _, callErr := procCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(name)))
+	if mutex == 0 {
+		return 0, false
+	}
+	if errno, ok := callErr.(syscall.Errno); ok && errno == 183 {
+		return mutex, false
+	}
+	return mutex, true
+}
+
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,19 +48,9 @@ func main() {
 		}
 	}()
 
-	kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	procCreateMutex := kernel32.NewProc("CreateMutexW")
-	procGetLastError := kernel32.NewProc("GetLastError")
-
-	name, _ := syscall.UTF16PtrFromString("Global\\AILrc_Single_Instance_Mutex")
-
-	mutex, _, _ := procCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(name)))
-	if mutex == 0 {
-		return
-	}
-
-	lastErr, _, _ := procGetLastError.Call()
-	if lastErr == 183 {
+	mutex, ok := acquireSingleInstanceMutex("Local\\AILrc_Single_Instance_Mutex")
+	if !ok {
+		_ = mutex
 		return
 	}
 
