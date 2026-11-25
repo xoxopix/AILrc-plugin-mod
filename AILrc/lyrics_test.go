@@ -6,8 +6,12 @@ import (
 )
 
 func TestLyricsAndScreenSafety(t *testing.T) {
-	if unsafe.Sizeof(NOTIFYICONDATAW{}) != 976 {
-		t.Fatalf("expected NOTIFYICONDATAW size 976, got %d", unsafe.Sizeof(NOTIFYICONDATAW{}))
+	expectedNidSize := uintptr(976)
+	if unsafe.Sizeof(uintptr(0)) == 4 {
+		expectedNidSize = 956
+	}
+	if unsafe.Sizeof(NOTIFYICONDATAW{}) != expectedNidSize {
+		t.Fatalf("expected NOTIFYICONDATAW size %d, got %d", expectedNidSize, unsafe.Sizeof(NOTIFYICONDATAW{}))
 	}
 	lrc := "\xef\xbb\xbf[00:01.50]<00:01.50>Hello <00:02.00>world\n[00:04.00]Next line\n"
 	lines := parseLrc(lrc)

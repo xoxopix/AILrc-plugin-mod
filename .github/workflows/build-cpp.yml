@@ -33,7 +33,6 @@ jobs:
     - name: Configure CMake
       run: >
         cmake -S plugin -B plugin/build
-        -G "Visual Studio 17 2022"
         -A ${{ matrix.arch }}
 
     - name: Build Plugin
@@ -43,7 +42,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.24'
+        go-version: '1.26'
         cache-dependency-path: AILrc/go.sum
 
     - name: Setup Node.js
@@ -132,11 +131,14 @@ jobs:
         zip AILrc_v${{ steps.version.outputs.version }}.zip AILrc.aimppack
 
     - name: Create Release
-      uses: softprops/action-gh-release@v3
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
-        name: AILrc v${{ steps.version.outputs.version }} (Plugin v${{ steps.version.outputs.version }})
-        body: ${{ github.event.head_commit.message }}
+        name: AILrc Mod v${{ steps.version.outputs.version }}
+        body: |
+          AILrc Mod based on [Leovikii/AILrc-plugin](https://github.com/Leovikii/AILrc-plugin) (MIT License, Copyright © 2026 Viki), with lyric effects inspired by [ivLis-Studio/ivLyrics](https://github.com/ivLis-Studio/ivLyrics).
+
+          See [Readme.md](Readme.md) for full credits and changelog.
         files: AILrc_v${{ steps.version.outputs.version }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

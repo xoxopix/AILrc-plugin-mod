@@ -101,6 +101,8 @@ var (
 	procFindWindowW                  = user32.NewProc("FindWindowW")
 	procSetWindowLongPtrW            = user32.NewProc("SetWindowLongPtrW")
 	procGetWindowLongPtrW            = user32.NewProc("GetWindowLongPtrW")
+	procSetWindowLongW               = user32.NewProc("SetWindowLongW")
+	procGetWindowLongW               = user32.NewProc("GetWindowLongW")
 	procCallWindowProcW              = user32.NewProc("CallWindowProcW")
 	procMessageBoxW                  = user32.NewProc("MessageBoxW")
 	procGetCursorPos                 = user32.NewProc("GetCursorPos")
@@ -129,6 +131,10 @@ const monitorDefaultToNull = 0
 // isPointOnScreen checks via MonitorFromPoint whether (x, y) falls on any active monitor,
 // rejecting minimized sentinel coordinates like (-32000, -32000).
 func isPointOnScreen(x, y int) bool {
+	if unsafe.Sizeof(uintptr(0)) == 4 {
+		ret, _, _ := procMonitorFromPoint.Call(uintptr(int32(x)), uintptr(int32(y)), monitorDefaultToNull)
+		return ret != 0
+	}
 	// Win64 ABI packs 8-byte POINT{int32 X, int32 Y} into a single uintptr argument.
 	pt := uint64(uint32(int32(x))) | (uint64(uint32(int32(y))) << 32)
 	ret, _, _ := procMonitorFromPoint.Call(uintptr(pt), monitorDefaultToNull)
@@ -142,11 +148,19 @@ func getWindowHandle() uintptr {
 }
 
 func setWindowLongPtr(hwnd uintptr, index int, newLong uintptr) uintptr {
+	if unsafe.Sizeof(uintptr(0)) == 4 {
+		ret, _, _ := procSetWindowLongW.Call(hwnd, uintptr(index), newLong)
+		return ret
+	}
 	ret, _, _ := procSetWindowLongPtrW.Call(hwnd, uintptr(index), newLong)
 	return ret
 }
 
 func getWindowLongPtr(hwnd uintptr, index int) uintptr {
+	if unsafe.Sizeof(uintptr(0)) == 4 {
+		ret, _, _ := procGetWindowLongW.Call(hwnd, uintptr(index))
+		return ret
+	}
 	ret, _, _ := procGetWindowLongPtrW.Call(hwnd, uintptr(index))
 	return ret
 }
