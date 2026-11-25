@@ -1,0 +1,50 @@
+# --- Global ---
+.DS_Store
+Thumbs.db
+*.log
+crash.log
+
+# --- IDE & Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- AILrc (Renderer - Go/Wails) ---
+# Build artifacts
+AILrc/build/bin/
+AILrc/build/windows/installer/
+AILrc/build/windows/wails.exe
+
+# Frontend artifacts
+AILrc/frontend/dist/
+AILrc/frontend/node_modules/
+AILrc/frontend/.vite/
+
+# Wails generated bindings (Optional: keep if you want types without building)
+# AILrc/wailsjs/
+.claude
+
+# --- AIMP Plugin (C++) ---
+# CMake build directories
+build/
+plugin/build/
+plugin/out/
+.vs/
+out/
+*.user
+
+
+# --- Binaries & Packages ---
+# Ignore all executables and dlls to prevent repo bloat
+*.exe
+*.dll
+*.so
+*.dylib
+*.syso
+*.pdb
+*.lib
+
+# AIMP Package
+*.aimppack
+*.zip
