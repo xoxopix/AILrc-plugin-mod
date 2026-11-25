@@ -11,7 +11,8 @@ void WINAPI MenuStateUpdater::OnExecute(IUnknown* Data) {
 }
 
 PluginController::PluginController(IAIMPCore* core, IAIMPServicePlayer* player) 
-    : FCore(core), FPlayer(player), FMenuManager(nullptr), FMenuToggle(nullptr), FMenuLock(nullptr), FMenuSettings(nullptr) {
+    : FCore(core), FPlayer(player), FMenuManager(nullptr), FMenuToggle(nullptr), FMenuLock(nullptr), FMenuSettings(nullptr),
+      FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0) {
     
     FCore->AddRef();
     if (FPlayer) FPlayer->AddRef();
@@ -130,7 +131,7 @@ void PluginController::UpdateMenuState() {
     bool isLocked = isRunning ? Utils::IsWindowLocked(hwnd) : false;
 
     if (FMenuToggle) {
-        FMenuToggle->SetValueAsInt32(AIMP_MENUITEM_PROPID_CHECKED, isRunning ? 1 : 0);
+        FMenuToggle->SetValueAsInt32(AIMP_MENUITEM_PROPID_CHECKED, FEnabled.load() ? 1 : 0);
     }
     if (FMenuLock) {
         FMenuLock->SetValueAsInt32(AIMP_MENUITEM_PROPID_CHECKED, isLocked ? 1 : 0);
@@ -185,12 +186,68 @@ void PluginController::CloseApp() {
 }
 
 void PluginController::ToggleApp() {
-    HWND hwnd = FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE);
-    if (hwnd) {
-        CloseApp();
+    bool nextEnabled = !FEnabled.load();
+    FEnabled.store(nextEnabled);
+    if (nextEnabled) {
+        LaunchApp();
     } else {
+        CloseApp();
+    }
+}
+
+void PluginController::OnInit() {
+    if (!FPlayer) return;
+    int state = FPlayer->GetState();
+    FLastState.store(state);
+    if (FEnabled.load() && state != AIMP_PLAYER_STATE_STOPPED) {
         LaunchApp();
     }
+}
+
+void PluginController::OnTrackStart() {
+    FLastState.store(AIMP_PLAYER_STATE_PLAYING);
+    FStopSeq.fetch_add(1);
+    if (FEnabled.load() && !FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE)) {
+        LaunchApp();
+        return;
+    }
+    SendTrackInfo();
+}
+
+void PluginController::OnStreamEnd() {
+    if (!FPlayer) return;
+    int state = FPlayer->GetState();
+    FLastState.store(state);
+    if (state == AIMP_PLAYER_STATE_STOPPED) {
+        ScheduleAutoClose();
+    }
+}
+
+void PluginController::OnPlayerStateChanged(int state) {
+    FLastState.store(state);
+    if (state == AIMP_PLAYER_STATE_PLAYING) {
+        FStopSeq.fetch_add(1);
+        if (FEnabled.load() && !FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE)) {
+            LaunchApp();
+            return;
+        }
+    } else if (state == AIMP_PLAYER_STATE_STOPPED) {
+        ScheduleAutoClose();
+    }
+    SendState();
+}
+
+void PluginController::ScheduleAutoClose() {
+    unsigned long long seq = FStopSeq.fetch_add(1) + 1;
+    std::thread([this, seq]() {
+        Sleep(450);
+        if (FStopSeq.load() != seq) return;
+        if (FLastState.load() != AIMP_PLAYER_STATE_STOPPED) return;
+        if (!FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE)) return;
+        nlohmann::json j;
+        j["type"] = "auto_close";
+        Utils::SendJSON(j.dump());
+    }).detach();
 }
 
 void PluginController::SyncInitialData() {

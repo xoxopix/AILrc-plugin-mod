@@ -55,6 +55,7 @@ var (
 	stateMutex      sync.RWMutex
 	oldWndProc      uintptr
 	ipcContext      context.Context
+	ipcApp          *App
 )
 
 type MusicInfoInternal struct {
@@ -64,8 +65,9 @@ type MusicInfoInternal struct {
 	FullPath    string
 }
 
-func setupIPC(ctx context.Context) {
+func setupIPC(ctx context.Context, app *App) {
 	ipcContext = ctx
+	ipcApp = app
 	hwnd := getWindowHandle()
 	if hwnd == 0 {
 		return
@@ -131,6 +133,16 @@ func handleMessage(jsonStr string) {
 		}
 		if ipcContext != nil {
 			runtime.EventsEmit(ipcContext, "open_settings")
+		}
+		return
+	}
+
+	if baseMsg.Type == "auto_close" {
+		if ipcApp != nil && ipcApp.inSettings {
+			return
+		}
+		if ipcContext != nil {
+			runtime.Quit(ipcContext)
 		}
 		return
 	}

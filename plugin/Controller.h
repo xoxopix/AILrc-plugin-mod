@@ -6,6 +6,7 @@
 #include "apiMessages.h"
 #include "apiActions.h"
 #include "IUnknownImpl.h"
+#include <atomic>
 #include <string>
 
 class PluginController;
@@ -34,6 +35,11 @@ private:
     IAIMPMenuItem* FMenuSettings;
     MenuStateUpdater* FMenuUpdater;
 
+    std::atomic<bool> FEnabled;
+    std::atomic<int> FLastState;
+    std::atomic<unsigned long long> FStopSeq;
+
+    void ScheduleAutoClose();
     void SyncInitialData();
     std::string GetTrackInfoJSON();
     std::string GetStateJSON();
@@ -45,6 +51,11 @@ public:
     void InitMenus(IUnknown* handler);
     void HandleMenuAction(IAIMPMenuItem* menuItem);
     void UpdateMenuState();
+
+    void OnInit();
+    void OnTrackStart();
+    void OnStreamEnd();
+    void OnPlayerStateChanged(int state);
 
     void LaunchApp();
     void CloseApp();

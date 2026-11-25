@@ -24,11 +24,16 @@ public:
 
         switch (Message) {
             case AIMP_MSG_EVENT_STREAM_START:
+                FController->OnTrackStart();
+                break;
             case AIMP_MSG_EVENT_PLAYING_FILE_INFO:
                 FController->SendTrackInfo();
                 break;
+            case AIMP_MSG_EVENT_STREAM_END:
+                FController->OnStreamEnd();
+                break;
             case AIMP_MSG_EVENT_PLAYER_STATE:
-                FController->SendState();
+                FController->OnPlayerStateChanged(Param1);
                 break;
             case AIMP_MSG_EVENT_PLAYER_UPDATE_POSITION_HR:
                 FController->SendPosition();
@@ -126,7 +131,7 @@ public:
         FActionEvent->SetController(FController);
 
         FController->InitMenus(FActionEvent);
-        FController->LaunchApp();
+        FController->OnInit();
 
         playerService->Release();
 

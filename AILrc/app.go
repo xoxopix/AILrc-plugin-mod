@@ -33,7 +33,7 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	setupIPC(ctx)
+	setupIPC(ctx, a)
 
 	hwnd := getWindowHandle()
 	hideFromTaskbar(hwnd)
