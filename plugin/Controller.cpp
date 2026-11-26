@@ -10,12 +10,37 @@ void WINAPI MenuStateUpdater::OnExecute(IUnknown* Data) {
     }
 }
 
+static void AccessEnabledConfig(IAIMPCore* core, bool write, bool& enabled) {
+    if (!core) return;
+    IAIMPServiceConfig* cfg = nullptr;
+    if (core->QueryInterface(IID_IAIMPServiceConfig, reinterpret_cast<void**>(&cfg)) != S_OK || !cfg) {
+        return;
+    }
+    if (IAIMPString* key = Utils::MakeAIMPString(core, L"AILrc\\Enabled")) {
+        if (write) {
+            cfg->SetValueAsInt32(key, enabled ? 1 : 0);
+            cfg->FlushCache();
+        } else {
+            INT32 val = 1;
+            if (cfg->GetValueAsInt32(key, &val) == S_OK) {
+                enabled = (val != 0);
+            }
+        }
+        key->Release();
+    }
+    cfg->Release();
+}
+
 PluginController::PluginController(IAIMPCore* core, IAIMPServicePlayer* player) 
     : FCore(core), FPlayer(player), FMenuManager(nullptr), FMenuToggle(nullptr), FMenuLock(nullptr), FMenuSettings(nullptr),
       FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0), FLastLaunchTick(0) {
     
     FCore->AddRef();
     if (FPlayer) FPlayer->AddRef();
+
+    bool enabled = true;
+    AccessEnabledConfig(FCore, false, enabled);
+    FEnabled.store(enabled);
 
     if (FCore->QueryInterface(IID_IAIMPServiceMenuManager, reinterpret_cast<void**>(&FMenuManager)) != S_OK) {
         FMenuManager = nullptr;
@@ -203,6 +228,7 @@ void PluginController::CloseApp() {
 void PluginController::ToggleApp() {
     bool nextEnabled = !FEnabled.load();
     FEnabled.store(nextEnabled);
+    AccessEnabledConfig(FCore, true, nextEnabled);
     if (nextEnabled) {
         LaunchApp();
     } else {
