@@ -53,6 +53,7 @@ const calculateValue = (clientX: number) => {
 const handlePointerDown = (e: PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    (e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
     isDragging.value = true;
     calculateValue(e.clientX);
 };
@@ -70,10 +71,9 @@ const handleGlobalMove = (e: PointerEvent) => {
     });
 };
 
-const handleGlobalUp = (e: PointerEvent) => {
+const stopDragging = () => {
     if (!isDragging.value) return;
 
-    e.preventDefault();
     isDragging.value = false;
 
     if (rafId !== null) {
@@ -82,16 +82,24 @@ const handleGlobalUp = (e: PointerEvent) => {
     }
 };
 
+const handleGlobalUp = (e: PointerEvent) => {
+    if (!isDragging.value) return;
+    e.preventDefault();
+    stopDragging();
+};
+
 onMounted(() => {
     window.addEventListener('pointermove', handleGlobalMove);
     window.addEventListener('pointerup', handleGlobalUp);
     window.addEventListener('pointercancel', handleGlobalUp);
+    window.addEventListener('blur', stopDragging);
 });
 
 onUnmounted(() => {
     window.removeEventListener('pointermove', handleGlobalMove);
     window.removeEventListener('pointerup', handleGlobalUp);
     window.removeEventListener('pointercancel', handleGlobalUp);
+    window.removeEventListener('blur', stopDragging);
 
     if (rafId !== null) {
         cancelAnimationFrame(rafId);

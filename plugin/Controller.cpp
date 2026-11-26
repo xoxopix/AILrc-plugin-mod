@@ -33,7 +33,7 @@ static void AccessEnabledConfig(IAIMPCore* core, bool write, bool& enabled) {
 
 PluginController::PluginController(IAIMPCore* core, IAIMPServicePlayer* player) 
     : FCore(core), FPlayer(player), FMenuManager(nullptr), FMenuToggle(nullptr), FMenuLock(nullptr), FMenuSettings(nullptr),
-      FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0), FLastLaunchTick(0) {
+      FEnabled(true), FLastState(AIMP_PLAYER_STATE_STOPPED), FStopSeq(0), FAlive(std::make_shared<std::atomic<bool>>(true)), FLastLaunchTick(0) {
     
     FCore->AddRef();
     if (FPlayer) FPlayer->AddRef();
@@ -51,6 +51,9 @@ PluginController::PluginController(IAIMPCore* core, IAIMPServicePlayer* player)
 }
 
 PluginController::~PluginController() {
+    if (FAlive) {
+        FAlive->store(false);
+    }
     if (FMenuSettings) {
         FCore->UnregisterExtension(FMenuSettings);
         FMenuSettings->Release();
@@ -280,8 +283,9 @@ void PluginController::OnPlayerStateChanged(int state) {
 
 void PluginController::ScheduleAutoClose() {
     unsigned long long seq = FStopSeq.fetch_add(1) + 1;
-    std::thread([this, seq]() {
+    std::thread([this, seq, alive = FAlive]() {
         Sleep(450);
+        if (!alive->load()) return;
         if (FStopSeq.load() != seq) return;
         if (FLastState.load() != AIMP_PLAYER_STATE_STOPPED) return;
         if (!FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE)) return;
@@ -292,17 +296,19 @@ void PluginController::ScheduleAutoClose() {
 }
 
 void PluginController::SyncInitialData() {
-    std::thread([this]() {
+    std::thread([this, alive = FAlive]() {
         HWND hwnd = nullptr;
         int attempts = 0;
         do {
             Sleep(100);
+            if (!alive->load()) return;
             hwnd = FindWindowW(nullptr, Utils::TARGET_WINDOW_TITLE);
             attempts++;
         } while (!hwnd && attempts <= 50);
 
         if (hwnd) {
             Sleep(700);
+            if (!alive->load()) return;
             std::string trackJson;
             {
                 std::lock_guard<std::mutex> lock(FLaunchMutex);

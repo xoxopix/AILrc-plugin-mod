@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { SetWindowClickThrough, ResizeWindow, EnterSettingsView, ExitSettingsView } from "../wailsjs/go/main/App";
+import { SetWindowClickThrough, ResizeWindow, EnterSettingsView, ExitSettingsView, ConsumePendingSettings } from "../wailsjs/go/main/App";
 import { EventsOn } from "../wailsjs/runtime/runtime";
 import { useAimp } from './composables/useAimp';
 import { useLyrics } from './composables/useLyrics';
@@ -99,6 +99,11 @@ onMounted(() => {
     const cancelOpenSettings = EventsOn('open_settings', () => {
         handleOpenSettings();
     });
+    ConsumePendingSettings().then((pending) => {
+        if (pending) {
+            handleOpenSettings();
+        }
+    }).catch(() => {});
 
     const handleResize = () => {
         if (isSettingsOpen.value || isTransitioning.value) return;

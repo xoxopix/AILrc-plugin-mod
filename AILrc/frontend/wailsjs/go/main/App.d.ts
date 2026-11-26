@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function ApplyWindowStyle(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function ConsumePendingSettings():Promise<boolean>;
+
 export function EnterSettingsView(arg1:number,arg2:number):Promise<void>;
 
 export function ExitSettingsView(arg1:number,arg2:number):Promise<void>;

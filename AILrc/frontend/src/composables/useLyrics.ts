@@ -12,7 +12,10 @@ export function useLyrics(
     const currentLine = ref<LyricLine | null>(null);
     const nextLine = ref<LyricLine | null>(null);
 
+    let fetchSeq = 0;
+
     watch(fileName, async (newFileName) => {
+        const seq = ++fetchSeq;
         if (!newFileName) {
             lyrics.value = [];
             currentLine.value = null;
@@ -23,6 +26,7 @@ export function useLyrics(
         }
 
         const lrc = await FetchLyrics(newFileName);
+        if (seq !== fetchSeq) return;
         lyrics.value = lrc || [];
         if (lyrics.value.length === 0) {
             currentLine.value = null;

@@ -7,6 +7,7 @@
 #include "apiActions.h"
 #include "IUnknownImpl.h"
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -39,6 +40,7 @@ private:
     std::atomic<bool> FEnabled;
     std::atomic<int> FLastState;
     std::atomic<unsigned long long> FStopSeq;
+    std::shared_ptr<std::atomic<bool>> FAlive;
     std::mutex FLaunchMutex;
     ULONGLONG FLastLaunchTick;
     std::string FPendingTrackJson;

@@ -6,6 +6,10 @@ export function ApplyWindowStyle(arg1, arg2, arg3) {
   return window['go']['main']['App']['ApplyWindowStyle'](arg1, arg2, arg3);
 }
 
+export function ConsumePendingSettings() {
+  return window['go']['main']['App']['ConsumePendingSettings']();
+}
+
 export function EnterSettingsView(arg1, arg2) {
   return window['go']['main']['App']['EnterSettingsView'](arg1, arg2);
 }

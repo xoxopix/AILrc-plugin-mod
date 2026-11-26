@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -18,12 +19,13 @@ type PlayerState struct {
 }
 
 type App struct {
-	ctx         context.Context
-	inSettings  bool
-	savedPosX   int
-	savedPosY   int
-	hasSavedPos bool
-	savedLocked bool
+	ctx             context.Context
+	inSettings      bool
+	pendingSettings atomic.Bool
+	savedPosX       int
+	savedPosY       int
+	hasSavedPos     bool
+	savedLocked     bool
 }
 
 func NewApp() *App {
@@ -144,7 +146,12 @@ func (a *App) GetInstalledFonts() []string {
 	return enumInstalledFonts()
 }
 
+func (a *App) ConsumePendingSettings() bool {
+	return a.pendingSettings.Swap(false)
+}
+
 func (a *App) EnterSettingsView(width, height int) {
+	a.pendingSettings.Store(false)
 	if !a.inSettings {
 		x, y := runtime.WindowGetPosition(a.ctx)
 		if isPointOnScreen(x, y) || isPointOnScreen(x+120, y+40) {

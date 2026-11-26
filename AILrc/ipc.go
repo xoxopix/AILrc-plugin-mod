@@ -123,6 +123,9 @@ func handleMessage(jsonStr string) {
 	}
 
 	if baseMsg.Type == "settings" {
+		if ipcApp != nil {
+			ipcApp.pendingSettings.Store(true)
+		}
 		hwnd := getWindowHandle()
 		if hwnd != 0 {
 			if !isWindowVisible(hwnd) {
