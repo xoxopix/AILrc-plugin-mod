@@ -36,7 +36,9 @@ func SetClickThrough(enabled bool, rect *DOMRect) {
 		if transparent {
 			exStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT
 		} else {
-			exStyle &^= WS_EX_TRANSPARENT
+			// Clear WS_EX_LAYERED as well: Wails uses DirectComposition (WS_EX_NOREDIRECTIONBITMAP),
+			// and leaving WS_EX_LAYERED set after unlocking pins DWM's hit-test surface to the old size.
+			exStyle &^= WS_EX_LAYERED | WS_EX_TRANSPARENT
 		}
 		setWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle)
 	}
