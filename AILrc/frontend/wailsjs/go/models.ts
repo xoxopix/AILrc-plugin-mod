@@ -19,6 +19,7 @@ export namespace main {
 	    borderRadius: number;
 	    backdropType: string;
 	    showNextLine: boolean;
+	    lyricOffsetMs: number;
 	    isLocked: boolean;
 	    windowWidth: number;
 	    windowX: number;
@@ -49,6 +50,7 @@ export namespace main {
 	        this.borderRadius = source["borderRadius"];
 	        this.backdropType = source["backdropType"];
 	        this.showNextLine = source["showNextLine"];
+	        this.lyricOffsetMs = source["lyricOffsetMs"];
 	        this.isLocked = source["isLocked"];
 	        this.windowWidth = source["windowWidth"];
 	        this.windowX = source["windowX"];

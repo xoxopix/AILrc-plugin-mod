@@ -74,7 +74,7 @@ const backdropOptions: { label: string; value: BackdropType }[] = [
 ];
 
 const handleChange = (key: keyof AppConfig, value: any) => {
-    if (typeof value === 'number' && !['fontWeight', 'letterSpacing', 'glowIntensity', 'borderRadius'].includes(key)) {
+    if (typeof value === 'number' && !['fontWeight', 'letterSpacing', 'glowIntensity', 'borderRadius', 'lyricOffsetMs'].includes(key)) {
         value = parseFloat(value.toFixed(2));
     }
     const nextConfig = { ...props.config, [key]: value };
@@ -82,6 +82,20 @@ const handleChange = (key: keyof AppConfig, value: any) => {
         ApplyWindowStyle(nextConfig.backdropType, nextConfig.borderRadius, nextConfig.bgOpacity);
     }
     emit('change', nextConfig);
+};
+
+const formatLyricOffset = (ms: number) => {
+    const v = Math.round(ms || 0);
+    if (v === 0) return '0 ms (Default)';
+    const sign = v > 0 ? '+' : '-';
+    const abs = Math.abs(v);
+    const val = abs >= 1000 ? `${(abs / 1000).toFixed(2)} s` : `${abs} ms`;
+    return `${sign}${val} (${v > 0 ? 'ahead' : 'behind'})`;
+};
+
+const nudgeLyricOffset = (delta: number) => {
+    const cur = Math.round(props.config.lyricOffsetMs ?? 0);
+    handleChange('lyricOffsetMs', Math.max(-5000, Math.min(5000, cur + delta)));
 };
 
 const previewBg = computed(() => {
@@ -190,6 +204,42 @@ const previewBg = computed(() => {
                     :display-fn="(v) => `${v.toFixed(1)}x`"
                     @change="(v) => handleChange('effectSpeed', v)"
                 />
+
+                <CustomSlider
+                    label="Lyric Sync"
+                    :value="config.lyricOffsetMs ?? 0"
+                    :min="-5000"
+                    :max="5000"
+                    :step="50"
+                    :centered="true"
+                    :inverted="true"
+                    :display-fn="formatLyricOffset"
+                    @change="(v) => handleChange('lyricOffsetMs', v)"
+                >
+                    <template #between>
+                        <div class="flex items-center justify-between px-1 text-[11px] font-bold">
+                            <button
+                                @click="nudgeLyricOffset(50)"
+                                title="Advance +50 ms"
+                                class="w-7 h-6 rounded-md bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-colors cursor-pointer flex items-center justify-center text-sm leading-none"
+                            >+</button>
+                            <button
+                                @click="handleChange('lyricOffsetMs', 0)"
+                                :class="[
+                                    'px-2.5 py-0.5 rounded-md border text-[10px] uppercase tracking-wider transition-colors cursor-pointer',
+                                    (config.lyricOffsetMs ?? 0) !== 0
+                                        ? 'bg-pink-600/30 border-pink-400/50 text-pink-200 hover:bg-pink-600/50'
+                                        : 'bg-white/5 border-white/10 text-white/45 hover:text-white/75'
+                                ]"
+                            >Reset</button>
+                            <button
+                                @click="nudgeLyricOffset(-50)"
+                                title="Delay -50 ms"
+                                class="w-7 h-6 rounded-md bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white transition-colors cursor-pointer flex items-center justify-center text-sm leading-none"
+                            >−</button>
+                        </div>
+                    </template>
+                </CustomSlider>
 
                 <div class="flex items-center justify-between py-1">
                     <span class="text-[11px] font-bold text-white/50 uppercase tracking-wider">Next Line Preview</span>

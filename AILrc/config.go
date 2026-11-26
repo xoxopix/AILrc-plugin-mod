@@ -26,6 +26,7 @@ type AppConfig struct {
 	BorderRadius        int     `json:"borderRadius"`
 	BackdropType        string  `json:"backdropType"`
 	ShowNextLine        bool    `json:"showNextLine"`
+	LyricOffsetMs       int     `json:"lyricOffsetMs"`
 	IsLocked            bool    `json:"isLocked"`
 	WindowWidth         int     `json:"windowWidth"`
 	WindowX             int     `json:"windowX"`
@@ -122,6 +123,13 @@ func LoadAppConfig() AppConfig {
 	}
 	if config.WindowWidth < 280 || config.WindowWidth > 3840 {
 		config.WindowWidth = 800
+	}
+	if config.LyricOffsetMs < -5000 || config.LyricOffsetMs > 5000 {
+		if config.LyricOffsetMs < -5000 {
+			config.LyricOffsetMs = -5000
+		} else {
+			config.LyricOffsetMs = 5000
+		}
 	}
 
 	return config

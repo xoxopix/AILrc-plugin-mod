@@ -61,6 +61,7 @@ export interface AppConfig {
     borderRadius: number;
     backdropType: BackdropType;
     showNextLine: boolean;
+    lyricOffsetMs: number;
     isLocked: boolean;
     windowWidth: number;
 }

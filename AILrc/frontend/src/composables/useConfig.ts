@@ -21,6 +21,7 @@ const defaultConfig: AppConfig = {
     borderRadius: 12,
     backdropType: "none",
     showNextLine: true,
+    lyricOffsetMs: 0,
     isLocked: false,
     windowWidth: 800
 };

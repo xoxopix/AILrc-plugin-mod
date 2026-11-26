@@ -14,9 +14,14 @@ const isTransitioning = ref(false);
 
 const { config, setConfig, save: saveConfig, isLoaded } = useConfig();
 const { musicInfo, playerState } = useAimp();
+const effectivePosition = computed(() => {
+    const pos = playerState.value?.Position;
+    if (pos === undefined) return undefined;
+    return pos + (config.value.lyricOffsetMs ?? 0);
+});
 const { mainText, subText, currentLine, nextLine } = useLyrics(
     computed(() => musicInfo.value?.FileName),
-    computed(() => playerState.value?.Position)
+    effectivePosition
 );
 
 const lyricRef = ref<InstanceType<typeof LyricRenderer>>();
@@ -208,7 +213,7 @@ const effectiveBorderRadius = computed(() => {
                     :sub-text="subText"
                     :current-line="currentLine"
                     :next-line="nextLine"
-                    :position="playerState?.Position"
+                    :position="effectivePosition"
                     :config="config"
                 />
             </div>

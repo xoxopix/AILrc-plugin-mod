@@ -9,6 +9,8 @@ interface Props {
     step?: number;
     unit?: string;
     displayFn?: (val: number) => string;
+    centered?: boolean;
+    inverted?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -23,7 +25,20 @@ let rafId: number | null = null;
 
 const safeValue = computed(() => props.value ?? props.min);
 const percentage = computed(() => {
-    return Math.min(100, Math.max(0, ((safeValue.value - props.min) / (props.max - props.min)) * 100));
+    const raw = props.inverted
+        ? ((props.max - safeValue.value) / (props.max - props.min)) * 100
+        : ((safeValue.value - props.min) / (props.max - props.min)) * 100;
+    return Math.min(100, Math.max(0, raw));
+});
+
+const fillStyle = computed(() => {
+    if (!props.centered) {
+        return { left: '0%', width: `${percentage.value}%` };
+    }
+    return {
+        left: `${Math.min(50, percentage.value)}%`,
+        width: `${Math.abs(percentage.value - 50)}%`,
+    };
 });
 
 const displayValue = computed(() => {
@@ -40,7 +55,9 @@ const calculateValue = (clientX: number) => {
     let percent = (clientX - rect.left) / rect.width;
     percent = Math.max(0, Math.min(1, percent));
 
-    let rawValue = props.min + percent * (props.max - props.min);
+    let rawValue = props.inverted
+        ? props.max - percent * (props.max - props.min)
+        : props.min + percent * (props.max - props.min);
 
     if (props.step) {
         rawValue = Math.round(rawValue / props.step) * props.step;
@@ -117,6 +134,8 @@ onUnmounted(() => {
             </span>
         </div>
 
+        <slot name="between" />
+
         <div
             class="h-6 flex items-center cursor-pointer group touch-none px-3.5"
             @pointerdown="handlePointerDown"
@@ -127,8 +146,13 @@ onUnmounted(() => {
                 class="relative w-full h-1.5 bg-white/10 rounded-full overflow-visible transition-colors group-hover:bg-white/20"
             >
                 <div
-                    class="absolute top-0 left-0 h-full bg-pink-500 rounded-full pointer-events-none"
-                    :style="{ width: `${percentage}%` }"
+                    v-if="centered"
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/30 rounded-full pointer-events-none"
+                />
+
+                <div
+                    class="absolute top-0 h-full bg-pink-500 rounded-full pointer-events-none"
+                    :style="fillStyle"
                 />
 
                 <div
